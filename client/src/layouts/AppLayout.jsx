@@ -35,7 +35,7 @@ export default function AppLayout() {
 
   return (
     <div className="min-h-screen flex bg-slate-50 dark:bg-slate-950">
-      <aside className="w-60 shrink-0 bg-slate-900 text-slate-200 flex flex-col border-r border-slate-800">
+      <aside className="w-60 shrink-0 bg-slate-900 text-slate-200 flex flex-col border-r border-slate-800 h-screen sticky top-0">
         <div className="px-5 py-5 text-lg font-semibold text-white border-b border-slate-800 flex items-center gap-2">
           <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600 text-sm">
             S
