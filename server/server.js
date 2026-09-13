@@ -15,7 +15,11 @@ import supplierRoutes from './routes/supplierRoutes.js';
 
 const app = express();
 
-app.use(cors());
+const allowedOrigins = process.env.CLIENT_ORIGIN
+  ? process.env.CLIENT_ORIGIN.split(',').map((origin) => origin.trim())
+  : true; // no CLIENT_ORIGIN set (e.g. local dev) -> allow any origin
+
+app.use(cors({ origin: allowedOrigins }));
 app.use(express.json());
 app.use(morgan('dev'));
 
