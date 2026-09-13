@@ -44,7 +44,7 @@ export default function Suppliers() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Suppliers</h1>
           <p className="text-slate-500 dark:text-slate-400 text-sm">
@@ -62,7 +62,7 @@ export default function Suppliers() {
       {error && <p className="text-sm text-red-600 dark:text-red-400 mb-4">{error}</p>}
 
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="min-w-full text-sm whitespace-nowrap">
           <thead>
             <tr className="text-left text-xs text-slate-500 dark:text-slate-400 uppercase border-b border-slate-200 dark:border-slate-800">
               <th className="px-4 py-3">Name</th>

@@ -19,7 +19,8 @@ export default function InvoiceReceipt({ sale }) {
         <p className="text-xs text-slate-600 dark:text-slate-400 print:text-slate-600 mb-3">Customer: {sale.customer.name}</p>
       )}
 
-      <table className="w-full text-xs mb-3">
+      <div className="overflow-x-auto mb-3">
+      <table className="min-w-full text-xs whitespace-nowrap">
         <thead>
           <tr className="border-b border-slate-300 dark:border-slate-700 print:border-slate-300 text-left">
             <th className="py-1">Item</th>
@@ -41,6 +42,7 @@ export default function InvoiceReceipt({ sale }) {
           ))}
         </tbody>
       </table>
+      </div>
 
       <div className="text-right space-y-1">
         <p className="font-semibold">Total: {formatCurrency(sale.totalAmount)}</p>

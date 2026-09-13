@@ -21,7 +21,8 @@ export default function TransactionDetailModal({ transaction, onClose }) {
         )}
 
         {isSale ? (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="min-w-full text-sm whitespace-nowrap">
             <thead>
               <tr className="text-left text-xs text-slate-500 dark:text-slate-400 uppercase border-b border-slate-200 dark:border-slate-800">
                 <th className="py-1.5">Item</th>
@@ -43,6 +44,7 @@ export default function TransactionDetailModal({ transaction, onClose }) {
               ))}
             </tbody>
           </table>
+          </div>
         ) : (
           <div className="grid grid-cols-2 gap-2 text-sm">
             <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-3">

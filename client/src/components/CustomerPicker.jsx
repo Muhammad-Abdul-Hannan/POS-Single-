@@ -11,7 +11,7 @@ export default function CustomerPicker({
 }) {
   return (
     <div>
-      <div className="flex items-center justify-between mb-1">
+      <div className="flex items-center justify-between mb-1 flex-wrap gap-x-2 gap-y-1">
         <label className="block text-xs font-medium text-slate-600 dark:text-slate-400">{label}</label>
         <button
           type="button"

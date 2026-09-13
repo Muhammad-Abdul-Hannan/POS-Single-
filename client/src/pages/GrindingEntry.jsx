@@ -200,7 +200,7 @@ export default function GrindingEntry() {
         </form>
 
         <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-x-auto h-fit">
-          <table className="w-full text-sm">
+          <table className="min-w-full text-sm whitespace-nowrap">
             <thead>
               <tr className="text-left text-xs text-slate-500 dark:text-slate-400 uppercase border-b border-slate-200 dark:border-slate-800">
                 <th className="px-4 py-3">Date</th>

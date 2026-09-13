@@ -65,7 +65,8 @@ export default function CustomerLedgerModal({ customerId, onClose, onChanged }) 
                 {data.transactions.length === 0 ? (
                   <p className="text-sm text-slate-400 dark:text-slate-500 py-6 text-center">No transactions yet.</p>
                 ) : (
-                  <table className="w-full text-sm">
+                  <div className="overflow-x-auto">
+                  <table className="min-w-full text-sm whitespace-nowrap">
                     <thead>
                       <tr className="text-left text-xs text-slate-500 dark:text-slate-400 uppercase border-b border-slate-200 dark:border-slate-800">
                         <th className="py-1.5">Date</th>
@@ -81,16 +82,17 @@ export default function CustomerLedgerModal({ customerId, onClose, onChanged }) 
                           onClick={() => setSelectedTxn(t)}
                           className="border-b border-slate-100 dark:border-slate-800 last:border-0 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50"
                         >
-                          <td className="py-1.5 text-slate-700 dark:text-slate-300">{new Date(t.date).toLocaleDateString()}</td>
+                          <td className="py-1.5 text-slate-700 dark:text-slate-300 whitespace-nowrap">{new Date(t.date).toLocaleDateString()}</td>
                           <td className="py-1.5 capitalize text-slate-700 dark:text-slate-300">{t.type}</td>
-                          <td className="py-1.5 text-right text-slate-900 dark:text-slate-100">{formatCurrency(t.totalAmount)}</td>
-                          <td className="py-1.5 text-right text-red-600 dark:text-red-400">
+                          <td className="py-1.5 text-right text-slate-900 dark:text-slate-100 whitespace-nowrap">{formatCurrency(t.totalAmount)}</td>
+                          <td className="py-1.5 text-right text-red-600 dark:text-red-400 whitespace-nowrap">
                             {formatCurrency(t.totalAmount - t.amountPaid)}
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
+                  </div>
                 )}
               </div>
             ) : (
@@ -98,7 +100,8 @@ export default function CustomerLedgerModal({ customerId, onClose, onChanged }) 
                 {payments.length === 0 ? (
                   <p className="text-sm text-slate-400 dark:text-slate-500 py-6 text-center">No payments recorded yet.</p>
                 ) : (
-                  <table className="w-full text-sm">
+                  <div className="overflow-x-auto">
+                  <table className="min-w-full text-sm whitespace-nowrap">
                     <thead>
                       <tr className="text-left text-xs text-slate-500 dark:text-slate-400 uppercase border-b border-slate-200 dark:border-slate-800">
                         <th className="py-1.5">Date</th>
@@ -108,12 +111,13 @@ export default function CustomerLedgerModal({ customerId, onClose, onChanged }) 
                     <tbody>
                       {payments.map((p) => (
                         <tr key={p._id} className="border-b border-slate-100 dark:border-slate-800 last:border-0">
-                          <td className="py-1.5 text-slate-700 dark:text-slate-300">{new Date(p.date).toLocaleString()}</td>
-                          <td className="py-1.5 text-right text-emerald-600 dark:text-emerald-400 font-medium">{formatCurrency(p.amount)}</td>
+                          <td className="py-1.5 text-slate-700 dark:text-slate-300 whitespace-nowrap">{new Date(p.date).toLocaleString()}</td>
+                          <td className="py-1.5 text-right text-emerald-600 dark:text-emerald-400 font-medium whitespace-nowrap">{formatCurrency(p.amount)}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
+                  </div>
                 )}
               </div>
             )}
@@ -126,7 +130,7 @@ export default function CustomerLedgerModal({ customerId, onClose, onChanged }) 
                 </span>
               </div>
               {customer.creditBalance > 0 && (
-                <form onSubmit={handleRecordPayment} className="flex gap-2">
+                <form onSubmit={handleRecordPayment} className="flex gap-2 flex-wrap">
                   <input
                     type="number"
                     step="0.01"

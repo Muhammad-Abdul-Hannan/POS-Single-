@@ -36,25 +36,25 @@ export default function Reports() {
     <div>
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Reports</h1>
-        <div className="flex items-center gap-2 text-sm">
+        <div className="flex items-center gap-2 text-sm flex-wrap">
           <input
             type="date"
             value={from}
             onChange={(e) => setFrom(e.target.value)}
-            className="rounded-lg border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 px-2 py-1.5"
+            className="rounded-lg border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 px-2 py-1.5 min-w-0"
           />
           <span className="text-slate-400 dark:text-slate-500">to</span>
           <input
             type="date"
             value={to}
             onChange={(e) => setTo(e.target.value)}
-            className="rounded-lg border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 px-2 py-1.5"
+            className="rounded-lg border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 px-2 py-1.5 min-w-0"
           />
         </div>
       </div>
 
       {pnl && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <StatTile label="Total Revenue" value={formatCurrency(pnl.totalRevenue)} />
           <StatTile label="Cost of Goods" value={formatCurrency(pnl.costOfGoods)} />
           <StatTile label="Expenses" value={formatCurrency(pnl.totalExpenses)} />
@@ -100,7 +100,8 @@ export default function Reports() {
           {topProducts.length === 0 ? (
             <p className="text-sm text-slate-400 dark:text-slate-500 py-6 text-center">No sales data yet.</p>
           ) : (
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+            <table className="min-w-full text-sm whitespace-nowrap">
               <thead>
                 <tr className="text-left text-xs text-slate-500 dark:text-slate-400 uppercase border-b border-slate-200 dark:border-slate-800">
                   <th className="py-2">Product</th>
@@ -118,6 +119,7 @@ export default function Reports() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
 
@@ -126,7 +128,8 @@ export default function Reports() {
           {lowStock.length === 0 ? (
             <p className="text-sm text-slate-400 dark:text-slate-500 py-6 text-center">Nothing is low on stock.</p>
           ) : (
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+            <table className="min-w-full text-sm whitespace-nowrap">
               <thead>
                 <tr className="text-left text-xs text-slate-500 dark:text-slate-400 uppercase border-b border-slate-200 dark:border-slate-800">
                   <th className="py-2">Product</th>
@@ -146,6 +149,7 @@ export default function Reports() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       </div>

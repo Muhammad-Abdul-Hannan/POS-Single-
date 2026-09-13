@@ -134,7 +134,8 @@ export default function Purchases() {
             </button>
           </div>
 
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="min-w-full text-sm whitespace-nowrap">
             <thead>
               <tr className="text-left text-xs text-slate-500 dark:text-slate-400 uppercase border-b border-slate-200 dark:border-slate-800">
                 <th className="py-2">Item</th>
@@ -170,6 +171,7 @@ export default function Purchases() {
               )}
             </tbody>
           </table>
+          </div>
         </div>
 
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 h-fit space-y-4">
@@ -201,7 +203,7 @@ export default function Purchases() {
       </div>
 
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="min-w-full text-sm whitespace-nowrap">
           <thead>
             <tr className="text-left text-xs text-slate-500 dark:text-slate-400 uppercase border-b border-slate-200 dark:border-slate-800">
               <th className="px-4 py-3">Date</th>
