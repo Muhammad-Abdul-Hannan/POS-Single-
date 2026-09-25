@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import * as expensesApi from '../api/expenses';
 import { formatCurrency } from '../utils/format';
 
-const categories = ['electricity', 'rent', 'wages', 'maintenance', 'misc'];
+const categories = ['transport', 'trip', 'internet', 'petrol', 'electricity', 'rent', 'wages', 'maintenance', 'misc'];
 const emptyForm = { category: 'electricity', amount: '', note: '' };
 
 export default function Expenses() {
