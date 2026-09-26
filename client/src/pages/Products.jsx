@@ -230,8 +230,13 @@ export default function Products() {
                 value={form.category}
                 onChange={(e) => setForm({ ...form, category: e.target.value })}
               >
+                <option value="grocery">Plastic</option>
+                <option value="grocery">Steel</option>
+                <option value="grocery">Toy</option>
+                <option value="grocery">Jewellery</option>
                 <option value="grocery">Grocery</option>
                 <option value="aata">Aata</option>
+                <option value="grocery">Other</option>
               </select>
             </div>
             <div>
@@ -241,8 +246,8 @@ export default function Products() {
                 value={form.unit}
                 onChange={(e) => setForm({ ...form, unit: e.target.value })}
               >
-                <option value="kg">kg</option>
                 <option value="piece">piece</option>
+                <option value="kg">kg</option>
               </select>
             </div>
           </div>
