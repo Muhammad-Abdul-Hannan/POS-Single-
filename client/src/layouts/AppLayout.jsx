@@ -1,4 +1,5 @@
 import {
+  KeyRound,
   LayoutDashboard,
   Menu,
   Moon,
@@ -15,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
+import ChangePasswordModal from '../components/ChangePasswordModal';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
@@ -36,6 +38,7 @@ export default function AppLayout() {
   const { user, isOwner, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
 
   return (
     <div className="min-h-screen flex bg-slate-50 dark:bg-slate-950">
@@ -106,6 +109,13 @@ export default function AppLayout() {
               {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
             </button>
           </div>
+          <button
+            onClick={() => setChangePasswordOpen(true)}
+            className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white mb-2"
+          >
+            <KeyRound size={13} />
+            Change password
+          </button>
           <button onClick={logout} className="text-xs text-slate-400 hover:text-white underline">
             Sign out
           </button>
@@ -130,6 +140,8 @@ export default function AppLayout() {
           </div>
         </main>
       </div>
+
+      <ChangePasswordModal open={changePasswordOpen} onClose={() => setChangePasswordOpen(false)} />
     </div>
   );
 }

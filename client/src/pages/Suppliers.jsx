@@ -1,24 +1,28 @@
-import { useEffect, useState } from 'react';
-import * as suppliersApi from '../api/suppliers';
-import Modal from '../components/Modal';
-import { formatCurrency } from '../utils/format';
+import { useEffect, useState } from "react";
+import * as suppliersApi from "../api/suppliers";
+import Modal from "../components/Modal";
+import SupplierLedgerModal from "../components/SupplierLedgerModal";
+import { formatCurrency } from "../utils/format";
 
-const emptyForm = { name: '', phone: '', address: '' };
+const emptyForm = { name: "", phone: "", address: "" };
 
 export default function Suppliers() {
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [ledgerSupplierId, setLedgerSupplierId] = useState(null);
 
   function load() {
     setLoading(true);
     suppliersApi
       .listSuppliers()
       .then(setSuppliers)
-      .catch((err) => setError(err.response?.data?.message || 'Failed to load suppliers'))
+      .catch((err) =>
+        setError(err.response?.data?.message || "Failed to load suppliers"),
+      )
       .finally(() => setLoading(false));
   }
 
@@ -27,14 +31,14 @@ export default function Suppliers() {
   async function handleAdd(e) {
     e.preventDefault();
     setSaving(true);
-    setError('');
+    setError("");
     try {
       await suppliersApi.createSupplier(form);
       setModalOpen(false);
       setForm(emptyForm);
       load();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to add supplier');
+      setError(err.response?.data?.message || "Failed to add supplier");
     } finally {
       setSaving(false);
     }
@@ -46,9 +50,17 @@ export default function Suppliers() {
     <div>
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Suppliers</h1>
+          <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">
+            Suppliers
+          </h1>
           <p className="text-slate-500 dark:text-slate-400 text-sm">
-            Total owed to suppliers: <span className="font-medium text-slate-700 dark:text-slate-200">{formatCurrency(totalOwed)}</span>
+            Total owed to suppliers:{" "}
+            <span className="font-medium text-slate-700 dark:text-slate-200">
+              {formatCurrency(totalOwed)}
+            </span>
+            <span className="ml-2 text-slate-400 dark:text-slate-500">
+              · click a row to pay or view details
+            </span>
           </p>
         </div>
         <button
@@ -59,7 +71,9 @@ export default function Suppliers() {
         </button>
       </div>
 
-      {error && <p className="text-sm text-red-600 dark:text-red-400 mb-4">{error}</p>}
+      {error && (
+        <p className="text-sm text-red-600 dark:text-red-400 mb-4">{error}</p>
+      )}
 
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-x-auto">
         <table className="min-w-full text-sm whitespace-nowrap">
@@ -67,29 +81,49 @@ export default function Suppliers() {
             <tr className="text-left text-xs text-slate-500 dark:text-slate-400 uppercase border-b border-slate-200 dark:border-slate-800">
               <th className="px-4 py-3">Name</th>
               <th className="px-4 py-3">Phone</th>
+              <th className="px-4 py-3">Address</th>
               <th className="px-4 py-3 text-right">Balance Owed</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={3} className="px-4 py-6 text-center text-slate-400 dark:text-slate-500">
+                <td
+                  colSpan={4}
+                  className="px-4 py-6 text-center text-slate-400 dark:text-slate-500"
+                >
                   Loading…
                 </td>
               </tr>
             ) : suppliers.length === 0 ? (
               <tr>
-                <td colSpan={3} className="px-4 py-6 text-center text-slate-400 dark:text-slate-500">
+                <td
+                  colSpan={4}
+                  className="px-4 py-6 text-center text-slate-400 dark:text-slate-500"
+                >
                   No suppliers yet.
                 </td>
               </tr>
             ) : (
               suppliers.map((s) => (
-                <tr key={s._id} className="border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                  <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">{s.name}</td>
-                  <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{s.phone || '—'}</td>
+                <tr
+                  key={s._id}
+                  onClick={() => setLedgerSupplierId(s._id)}
+                  className="border-b border-slate-100 dark:border-slate-800 last:border-0 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                >
+                  <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">
+                    {s.name}
+                  </td>
+                  <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
+                    {s.phone || "—"}
+                  </td>
+                  <td className="px-4 py-3 text-slate-600 dark:text-slate-400 max-w-xs truncate">
+                    {s.address || "—"}
+                  </td>
                   <td className="px-4 py-3 text-right">
-                    <span className={`font-medium ${s.balanceOwed > 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}>
+                    <span
+                      className={`font-medium ${s.balanceOwed > 0 ? "text-red-600 dark:text-red-400" : "text-slate-500 dark:text-slate-400"}`}
+                    >
                       {formatCurrency(s.balanceOwed)}
                     </span>
                   </td>
@@ -100,10 +134,16 @@ export default function Suppliers() {
         </table>
       </div>
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Add Supplier">
+      <Modal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title="Add Supplier"
+      >
         <form onSubmit={handleAdd} className="space-y-3">
           <div>
-            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Name</label>
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+              Name
+            </label>
             <input
               className="w-full rounded-lg border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 px-3 py-2 text-sm"
               value={form.name}
@@ -112,7 +152,9 @@ export default function Suppliers() {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Phone</label>
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+              Phone
+            </label>
             <input
               className="w-full rounded-lg border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 px-3 py-2 text-sm"
               value={form.phone}
@@ -120,7 +162,9 @@ export default function Suppliers() {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Address</label>
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+              Address
+            </label>
             <input
               className="w-full rounded-lg border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 px-3 py-2 text-sm"
               value={form.address}
@@ -132,10 +176,16 @@ export default function Suppliers() {
             disabled={saving}
             className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-medium rounded-lg py-2 text-sm"
           >
-            {saving ? 'Saving…' : 'Add Supplier'}
+            {saving ? "Saving…" : "Add Supplier"}
           </button>
         </form>
       </Modal>
+
+      <SupplierLedgerModal
+        supplierId={ledgerSupplierId}
+        onClose={() => setLedgerSupplierId(null)}
+        onChanged={load}
+      />
     </div>
   );
 }

@@ -12,15 +12,15 @@ async function seed() {
     process.exit(0);
   }
 
-  const passwordHash = await bcrypt.hash('owner123', 10);
+  const passwordHash = await bcrypt.hash('mahannan121', 10);
   await User.create({
-    name: 'Shop Owner',
-    username: 'owner',
+    name: 'Muhammad Abdul Hannan',
+    username: 'hannanryk121@gmail.com',
     passwordHash,
     role: 'owner',
   });
 
-  console.log('Owner account created — username: owner / password: owner123');
+  console.log('Owner account created — username: hannanryk121@gmail.com / password: mahannan121');
   console.log('Please log in and change this password.');
   process.exit(0);
 }
