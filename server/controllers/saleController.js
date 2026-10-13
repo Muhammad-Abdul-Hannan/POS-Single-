@@ -34,14 +34,26 @@ export async function createSale(req, res) {
     }
 
     let rate = product.sellingPricePerUnit;
-    if (item.rate !== undefined && item.rate !== null && item.rate !== '') {
-      const customRate = Number(item.rate);
-      if (!customRate || customRate <= 0) {
-        return res.status(400).json({ message: `Invalid custom price for ${product.name}` });
+    let subtotal;
+    if (item.lineTotal !== undefined && item.lineTotal !== null && item.lineTotal !== '') {
+      // Lump-sum pricing (e.g. 12 items for Rs. 900): the exact total is the subtotal,
+      // and the per-unit rate is derived from it so reports/revenue stay exact.
+      const lineTotal = Number(item.lineTotal);
+      if (!lineTotal || lineTotal <= 0) {
+        return res.status(400).json({ message: `Invalid total price for ${product.name}` });
       }
-      rate = customRate;
+      subtotal = Number(lineTotal.toFixed(2));
+      rate = Number((subtotal / qty).toFixed(4));
+    } else {
+      if (item.rate !== undefined && item.rate !== null && item.rate !== '') {
+        const customRate = Number(item.rate);
+        if (!customRate || customRate <= 0) {
+          return res.status(400).json({ message: `Invalid custom price for ${product.name}` });
+        }
+        rate = customRate;
+      }
+      subtotal = Number((rate * qty).toFixed(2));
     }
-    const subtotal = Number((rate * qty).toFixed(2));
     totalAmount += subtotal;
 
     resolvedItems.push({

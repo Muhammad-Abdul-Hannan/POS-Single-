@@ -6,12 +6,14 @@ import CustomerPicker from '../components/CustomerPicker';
 import InvoiceReceipt from '../components/InvoiceReceipt';
 import Modal from '../components/Modal';
 import { formatCurrency } from '../utils/format';
-
-const emptyNewCustomer = { name: '', phone: '', address: '' };
-
-function effectiveRate(item) {
-  return item.customPrice != null ? item.customPrice : item.defaultRate;
-}
+import { PRICE_SOURCE, emptyNewCustomer } from '../utils/posConstants';
+import {
+  buildSaleItemPayload,
+  formatInputNumber,
+  resolveLinePricing,
+  roundMoney,
+  syncLinePricing,
+} from '../utils/posHelpers';
 
 export default function POS() {
   const [products, setProducts] = useState([]);
@@ -20,9 +22,13 @@ export default function POS() {
   const [selectedProductId, setSelectedProductId] = useState('');
   const [qtyInput, setQtyInput] = useState('');
   const [priceInput, setPriceInput] = useState('');
+  const [totalInput, setTotalInput] = useState('');
+  const [priceSource, setPriceSource] = useState(PRICE_SOURCE.UNIT);
   const [editingIndex, setEditingIndex] = useState(null);
   const [editQty, setEditQty] = useState('');
   const [editCustomPrice, setEditCustomPrice] = useState('');
+  const [editTotal, setEditTotal] = useState('');
+  const [editSource, setEditSource] = useState(PRICE_SOURCE.UNIT);
   const [paymentType, setPaymentType] = useState('cash');
   const [customerMode, setCustomerMode] = useState('select');
   const [customerId, setCustomerId] = useState('');
@@ -51,15 +57,15 @@ export default function POS() {
     if (!qty || qty <= 0) return setError('Enter a valid quantity');
     if (qty > product.stockQty) return setError(`Only ${product.stockQty} ${product.unit} in stock`);
 
-    let customPrice = null;
-    if (priceInput !== '') {
-      const custom = Number(priceInput);
-      if (!custom || custom <= 0) return setError('Enter a valid custom price');
-      customPrice = custom;
-    }
-
     const defaultRate = product.sellingPricePerUnit;
-    const rate = customPrice ?? defaultRate;
+    const pricing = resolveLinePricing({
+      qty,
+      defaultRate,
+      price: priceInput.trim(),
+      total: totalInput.trim(),
+      source: priceSource,
+    });
+    if (pricing.error) return setError(pricing.error);
 
     setCart((prev) => [
       ...prev,
@@ -68,14 +74,73 @@ export default function POS() {
         name: product.name,
         unit: product.unit,
         defaultRate,
-        customPrice,
+        customPrice: pricing.customPrice,
+        lumpSum: pricing.lumpSum,
         qty,
-        subtotal: Number((qty * rate).toFixed(2)),
+        subtotal: pricing.subtotal,
       },
     ]);
     setSelectedProductId('');
     setQtyInput('');
     setPriceInput('');
+    setTotalInput('');
+    setPriceSource(PRICE_SOURCE.UNIT);
+  }
+
+  function applyAddSync(changed, next) {
+    const synced = syncLinePricing({
+      qty: next.qty ?? qtyInput,
+      price: next.price ?? priceInput,
+      total: next.total ?? totalInput,
+      source: priceSource,
+      changed,
+    });
+    setPriceInput(synced.price);
+    setTotalInput(synced.total);
+    setPriceSource(synced.source);
+  }
+
+  function handleQtyChange(value) {
+    setQtyInput(value);
+    applyAddSync('qty', { qty: value });
+  }
+
+  function handlePriceChange(value) {
+    setPriceInput(value);
+    applyAddSync('price', { price: value });
+  }
+
+  function handleTotalChange(value) {
+    setTotalInput(value);
+    applyAddSync('total', { total: value });
+  }
+
+  function applyEditSync(changed, next) {
+    const synced = syncLinePricing({
+      qty: next.qty ?? editQty,
+      price: next.price ?? editCustomPrice,
+      total: next.total ?? editTotal,
+      source: editSource,
+      changed,
+    });
+    setEditCustomPrice(synced.price);
+    setEditTotal(synced.total);
+    setEditSource(synced.source);
+  }
+
+  function handleEditQtyChange(value) {
+    setEditQty(value);
+    applyEditSync('qty', { qty: value });
+  }
+
+  function handleEditPriceChange(value) {
+    setEditCustomPrice(value);
+    applyEditSync('price', { price: value });
+  }
+
+  function handleEditTotalChange(value) {
+    setEditTotal(value);
+    applyEditSync('total', { total: value });
   }
 
   function removeFromCart(index) {
@@ -84,29 +149,35 @@ export default function POS() {
   }
 
   function startEdit(index) {
+    const item = cart[index];
     setEditingIndex(index);
-    setEditQty(String(cart[index].qty));
-    setEditCustomPrice(cart[index].customPrice != null ? String(cart[index].customPrice) : '');
+    setEditQty(String(item.qty));
+    setEditCustomPrice(item.customPrice != null ? formatInputNumber(item.customPrice) : '');
+    setEditTotal(item.customPrice != null ? formatInputNumber(item.subtotal) : '');
+    setEditSource(item.lumpSum ? PRICE_SOURCE.TOTAL : PRICE_SOURCE.UNIT);
   }
 
   function saveEdit(index) {
     const qty = Number(editQty);
     if (!qty || qty <= 0) return setError('Enter a valid quantity');
 
-    let customPrice = null;
-    if (editCustomPrice.trim() !== '') {
-      const custom = Number(editCustomPrice);
-      if (!custom || custom <= 0) return setError('Enter a valid custom price');
-      customPrice = custom;
-    }
+    const item = cart[index];
+    const pricing = resolveLinePricing({
+      qty,
+      defaultRate: item.defaultRate,
+      price: editCustomPrice.trim(),
+      total: editTotal.trim(),
+      source: editSource,
+    });
+    if (pricing.error) return setError(pricing.error);
 
     setError('');
     setCart((prev) =>
-      prev.map((item, i) => {
-        if (i !== index) return item;
-        const rate = customPrice ?? item.defaultRate;
-        return { ...item, qty, customPrice, subtotal: Number((qty * rate).toFixed(2)) };
-      })
+      prev.map((line, i) =>
+        i !== index
+          ? line
+          : { ...line, qty, customPrice: pricing.customPrice, lumpSum: pricing.lumpSum, subtotal: pricing.subtotal }
+      )
     );
     setEditingIndex(null);
   }
@@ -139,7 +210,7 @@ export default function POS() {
       }
 
       const payload = {
-        items: cart.map((i) => ({ productId: i.productId, qty: i.qty, rate: effectiveRate(i) })),
+        items: cart.map(buildSaleItemPayload),
         paymentType,
         customerId: resolvedCustomerId || undefined,
         amountPaid: paymentType === 'credit' ? Number(amountPaid) || 0 : undefined,
@@ -185,17 +256,27 @@ export default function POS() {
               placeholder="Qty"
               className="w-20 rounded-lg border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 px-3 py-2 text-sm"
               value={qtyInput}
-              onChange={(e) => setQtyInput(e.target.value)}
+              onChange={(e) => handleQtyChange(e.target.value)}
             />
             <input
               type="number"
               step="0.01"
               min="0"
               placeholder="Custom price"
-              title="Leave blank to use the usual selling price"
+              title="Price per unit. Leave blank to use the usual selling price. Filling this calculates the total."
               className="w-28 rounded-lg border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 px-3 py-2 text-sm"
               value={priceInput}
-              onChange={(e) => setPriceInput(e.target.value)}
+              onChange={(e) => handlePriceChange(e.target.value)}
+            />
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="Total price"
+              title="Whole amount for this quantity (e.g. 12 items for 900). Filling this calculates the custom price."
+              className="w-28 rounded-lg border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 px-3 py-2 text-sm"
+              value={totalInput}
+              onChange={(e) => handleTotalChange(e.target.value)}
             />
             <button
               onClick={addToCart}
@@ -236,7 +317,7 @@ export default function POS() {
                           min="0"
                           className="w-16 rounded border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 px-2 py-1 text-right text-sm"
                           value={editQty}
-                          onChange={(e) => setEditQty(e.target.value)}
+                          onChange={(e) => handleEditQtyChange(e.target.value)}
                         />
                       </td>
                       <td className="py-2 text-right text-slate-500 dark:text-slate-400">{formatCurrency(item.defaultRate)}</td>
@@ -248,13 +329,20 @@ export default function POS() {
                           placeholder="—"
                           className="w-20 rounded border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 px-2 py-1 text-right text-sm"
                           value={editCustomPrice}
-                          onChange={(e) => setEditCustomPrice(e.target.value)}
+                          onChange={(e) => handleEditPriceChange(e.target.value)}
                         />
                       </td>
-                      <td className="py-2 text-right text-slate-900 dark:text-slate-100">
-                        {formatCurrency(
-                          (Number(editQty) || 0) * (editCustomPrice.trim() !== '' ? Number(editCustomPrice) || 0 : item.defaultRate)
-                        )}
+                      <td className="py-2 text-right">
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder={String(roundMoney((Number(editQty) || 0) * item.defaultRate))}
+                          title="Edit the whole amount for this line"
+                          className="w-24 rounded border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 px-2 py-1 text-right text-sm"
+                          value={editTotal}
+                          onChange={(e) => handleEditTotalChange(e.target.value)}
+                        />
                       </td>
                       <td className="py-2 text-right whitespace-nowrap">
                         <button onClick={() => saveEdit(index)} className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 text-xs mr-2">
