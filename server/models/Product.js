@@ -8,6 +8,8 @@ const productSchema = new mongoose.Schema(
     sellingPricePerUnit: { type: Number, required: true, min: 0 },
     costPricePerUnit: { type: Number, required: true, min: 0 },
     stockQty: { type: Number, required: true, default: 0, min: 0 },
+    // Everything that has come in so far: opening stock + purchases + manual stock additions.
+    totalPurchasedQty: { type: Number, default: 0, min: 0 },
     lowStockThreshold: { type: Number, default: 0, min: 0 },
   },
   { timestamps: true }

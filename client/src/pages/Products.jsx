@@ -7,8 +7,8 @@ import { formatCurrency } from "../utils/format";
 
 const emptyForm = {
   name: "",
-  category: "plastic",
-  unit: "piece",
+  category: "grocery",
+  unit: "kg",
   sellingPricePerUnit: "",
   costPricePerUnit: "",
   stockQty: "",
@@ -168,7 +168,12 @@ export default function Products() {
               <th className="px-4 py-3">Category</th>
               <th className="px-4 py-3">Selling Price</th>
               {isOwner && <th className="px-4 py-3">Cost Price</th>}
-              <th className="px-4 py-3">Stock</th>
+              <th
+                className="px-4 py-3"
+                title="In stock / total received so far"
+              >
+                Stock
+              </th>
               {isOwner && <th className="px-4 py-3 text-right">Actions</th>}
             </tr>
           </thead>
@@ -214,6 +219,7 @@ export default function Products() {
                   <td className="px-4 py-3">
                     <StockBadge
                       stockQty={p.stockQty}
+                      totalPurchasedQty={p.totalPurchasedQty}
                       lowStockThreshold={p.lowStockThreshold}
                       unit={p.unit}
                     />

@@ -96,7 +96,7 @@ export async function createPurchase(req, res) {
   for (const item of resolvedItems) {
     await Product.updateOne(
       { _id: item.product },
-      { $inc: { stockQty: item.qty }, $set: { costPricePerUnit: item.costPrice } }
+      { $inc: { stockQty: item.qty, totalPurchasedQty: item.qty }, $set: { costPricePerUnit: item.costPrice } }
     );
   }
 

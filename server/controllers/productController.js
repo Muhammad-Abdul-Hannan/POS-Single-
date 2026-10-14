@@ -4,6 +4,7 @@ function serialize(product, isOwner) {
   const obj = product.toObject ? product.toObject() : product;
   if (!isOwner) {
     delete obj.costPricePerUnit;
+    delete obj.totalPurchasedQty;
   }
   return obj;
 }
@@ -33,6 +34,7 @@ export async function createProduct(req, res) {
     sellingPricePerUnit,
     costPricePerUnit,
     stockQty: stockQty || 0,
+    totalPurchasedQty: stockQty || 0,
     lowStockThreshold: lowStockThreshold || 0,
   });
 
@@ -71,6 +73,8 @@ export async function adjustStock(req, res) {
   }
 
   product.stockQty = newQty;
+  // Stock added manually counts as stock received; removals don't reduce the received total.
+  if (delta > 0) product.totalPurchasedQty = (product.totalPurchasedQty || 0) + delta;
   await product.save();
   res.json({ product, reason: reason || null });
 }
