@@ -6,6 +6,10 @@ const purchaseItemSchema = new mongoose.Schema(
     name: { type: String, required: true },
     qty: { type: Number, required: true, min: 0 },
     costPrice: { type: Number, required: true, min: 0 },
+    // This line's share of the purchase's extra expense, and the real cost per unit
+    // (supplier cost + that share). Older purchases don't have these.
+    extraCost: { type: Number, min: 0 },
+    landedCostPrice: { type: Number, min: 0 },
   },
   { _id: false }
 );
@@ -17,6 +21,10 @@ const purchaseSchema = new mongoose.Schema(
     items: { type: [purchaseItemSchema], required: true, validate: (v) => v.length > 0 },
     totalCost: { type: Number, required: true, min: 0 },
     amountPaid: { type: Number, required: true, default: 0, min: 0 },
+    // Money spent to get the goods here (bilti, freight...). Paid to someone other than the supplier,
+    // so it is NOT part of totalCost / what we owe the supplier.
+    extraExpense: { type: Number, default: 0, min: 0 },
+    extraExpenseNote: { type: String, trim: true },
     recordedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   },
   { timestamps: true }

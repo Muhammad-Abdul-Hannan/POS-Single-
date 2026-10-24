@@ -3,44 +3,13 @@ import * as grindingApi from '../api/grinding';
 import * as salesApi from '../api/sales';
 import TransactionDetailModal from '../components/TransactionDetailModal';
 import { formatCurrency } from '../utils/format';
-
-function firstOfMonth() {
-  const d = new Date();
-  d.setDate(1);
-  return d.toISOString().slice(0, 10);
-}
-function today() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function normalizeSale(s) {
-  return {
-    type: 'sale',
-    id: s._id,
-    date: s.date,
-    invoiceNo: s.invoiceNo,
-    items: s.items,
-    totalAmount: s.totalAmount,
-    amountPaid: s.amountPaid,
-    paymentType: s.paymentType,
-    customerDisplayName: s.customer?.name,
-  };
-}
-
-function normalizeGrinding(g) {
-  return {
-    type: 'grinding',
-    id: g._id,
-    date: g.date,
-    quantityKg: g.quantityKg,
-    ratePerKg: g.ratePerKg,
-    address: g.address,
-    totalAmount: g.amount,
-    amountPaid: g.amountPaid,
-    paymentType: g.paymentType,
-    customerDisplayName: g.customer?.name || g.customerName,
-  };
-}
+import {
+  firstOfMonth,
+  normalizeGrinding,
+  normalizeSale,
+  sumBy,
+  today,
+} from '../utils/salesHistoryHelpers';
 
 export default function SalesHistory() {
   const [from, setFrom] = useState(firstOfMonth());
@@ -69,7 +38,8 @@ export default function SalesHistory() {
 
   useEffect(load, [from, to, type]);
 
-  const totalAmount = rows.reduce((sum, r) => sum + r.totalAmount, 0);
+  const totalAmount = sumBy(rows, 'totalAmount');
+  const totalProfit = sumBy(rows, 'profit');
 
   return (
     <div>
@@ -77,7 +47,10 @@ export default function SalesHistory() {
         <div>
           <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Sales History</h1>
           <p className="text-slate-500 dark:text-slate-400 text-sm">
-            {rows.length} record{rows.length !== 1 ? 's' : ''} · Total {formatCurrency(totalAmount)}
+            {rows.length} record{rows.length !== 1 ? 's' : ''} · Total {formatCurrency(totalAmount)} · Profit{' '}
+            <span className={totalProfit >= 0 ? 'font-medium text-emerald-600 dark:text-emerald-400' : 'font-medium text-red-600 dark:text-red-400'}>
+              {formatCurrency(totalProfit)}
+            </span>
           </p>
         </div>
         <div className="flex items-center gap-2 text-sm flex-wrap">
@@ -115,18 +88,19 @@ export default function SalesHistory() {
               <th className="px-4 py-3">Customer</th>
               <th className="px-4 py-3">Payment</th>
               <th className="px-4 py-3 text-right">Amount</th>
+              <th className="px-4 py-3 text-right">Profit</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-slate-400 dark:text-slate-500">
+                <td colSpan={6} className="px-4 py-6 text-center text-slate-400 dark:text-slate-500">
                   Loading…
                 </td>
               </tr>
             ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-slate-400 dark:text-slate-500">
+                <td colSpan={6} className="px-4 py-6 text-center text-slate-400 dark:text-slate-500">
                   No records in this range.
                 </td>
               </tr>
@@ -146,10 +120,34 @@ export default function SalesHistory() {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right font-medium text-slate-900 dark:text-slate-100">{formatCurrency(r.totalAmount)}</td>
+                  <td
+                    className={`px-4 py-3 text-right font-medium ${
+                      r.profit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
+                    }`}
+                  >
+                    {formatCurrency(r.profit)}
+                  </td>
                 </tr>
               ))
             )}
           </tbody>
+          {!loading && rows.length > 0 && (
+            <tfoot>
+              <tr className="border-t-2 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 font-semibold">
+                <td colSpan={4} className="px-4 py-3 text-slate-700 dark:text-slate-300">
+                  Total ({rows.length} record{rows.length !== 1 ? 's' : ''})
+                </td>
+                <td className="px-4 py-3 text-right text-slate-900 dark:text-slate-100">{formatCurrency(totalAmount)}</td>
+                <td
+                  className={`px-4 py-3 text-right ${
+                    totalProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
+                  }`}
+                >
+                  {formatCurrency(totalProfit)}
+                </td>
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
 

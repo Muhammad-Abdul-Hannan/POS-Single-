@@ -30,7 +30,7 @@ export default function Reports() {
 
   useEffect(load, [from, to]);
 
-  const profitPositive = pnl && pnl.netProfit >= 0;
+  const profitPositive = pnl && pnl.profit >= 0;
 
   return (
     <div>
@@ -56,13 +56,13 @@ export default function Reports() {
       {pnl && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <StatTile label="Total Revenue" value={formatCurrency(pnl.totalRevenue)} />
-          <StatTile label="Cost of Goods" value={formatCurrency(pnl.costOfGoods)} />
-          <StatTile label="Expenses" value={formatCurrency(pnl.totalExpenses)} />
+          <StatTile label="Cost of Goods Sold" value={formatCurrency(pnl.costOfGoods)} />
           <StatTile
-            label="Net Profit"
-            value={formatCurrency(pnl.netProfit)}
+            label="Profit"
+            value={formatCurrency(pnl.profit)}
             valueClassName={profitPositive ? 'text-[#0ca30c]' : 'text-[#d03b3b]'}
           />
+          <StatTile label="Expenses (not in profit)" value={formatCurrency(pnl.totalExpenses)} />
         </div>
       )}
 

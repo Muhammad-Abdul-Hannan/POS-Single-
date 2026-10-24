@@ -5,6 +5,8 @@ import * as salesApi from '../api/sales';
 import CustomerPicker from '../components/CustomerPicker';
 import InvoiceReceipt from '../components/InvoiceReceipt';
 import Modal from '../components/Modal';
+import { useAuth } from '../context/AuthContext';
+import { buildBackdatedISO, todayInputValue } from '../utils/commonHelpers';
 import { formatCurrency } from '../utils/format';
 import { PRICE_SOURCE, emptyNewCustomer } from '../utils/posConstants';
 import {
@@ -16,6 +18,7 @@ import {
 } from '../utils/posHelpers';
 
 export default function POS() {
+  const { isOwner } = useAuth();
   const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [cart, setCart] = useState([]);
@@ -30,6 +33,7 @@ export default function POS() {
   const [editTotal, setEditTotal] = useState('');
   const [editSource, setEditSource] = useState(PRICE_SOURCE.UNIT);
   const [paymentType, setPaymentType] = useState('cash');
+  const [saleDate, setSaleDate] = useState(todayInputValue());
   const [customerMode, setCustomerMode] = useState('select');
   const [customerId, setCustomerId] = useState('');
   const [newCustomer, setNewCustomer] = useState(emptyNewCustomer);
@@ -214,6 +218,8 @@ export default function POS() {
         paymentType,
         customerId: resolvedCustomerId || undefined,
         amountPaid: paymentType === 'credit' ? Number(amountPaid) || 0 : undefined,
+        // Only owners can date a sale in the past; today's sales are stamped by the server.
+        date: isOwner ? buildBackdatedISO(saleDate) : undefined,
       };
       const sale = await salesApi.createSale(payload);
       setCompletedSale(sale);
@@ -386,6 +392,35 @@ export default function POS() {
             <span>Total</span>
             <span>{formatCurrency(total)}</span>
           </div>
+
+          {isOwner && (
+            <div>
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Sale Date</label>
+              <div className="flex gap-2">
+                <input
+                  type="date"
+                  max={todayInputValue()}
+                  value={saleDate}
+                  onChange={(e) => setSaleDate(e.target.value || todayInputValue())}
+                  className="flex-1 min-w-0 rounded-lg border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 px-3 py-2 text-sm"
+                />
+                {saleDate !== todayInputValue() && (
+                  <button
+                    type="button"
+                    onClick={() => setSaleDate(todayInputValue())}
+                    className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline whitespace-nowrap"
+                  >
+                    Back to today
+                  </button>
+                )}
+              </div>
+              {saleDate !== todayInputValue() && (
+                <p className="mt-1.5 text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 rounded-md px-2 py-1.5">
+                  This sale will be recorded for {new Date(`${saleDate}T12:00:00`).toLocaleDateString()}, not today.
+                </p>
+              )}
+            </div>
+          )}
 
           <div>
             <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Payment Type</label>

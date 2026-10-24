@@ -12,7 +12,7 @@ export async function getDashboardSummary(req, res) {
   startOfMonth.setDate(1);
   startOfMonth.setHours(0, 0, 0, 0);
 
-  const [todaySalesAgg, todayGrindingAgg, customers, lowStockCount, monthSalesAgg, monthGrindingAgg, monthExpensesAgg] =
+  const [todaySalesAgg, todayGrindingAgg, customers, lowStockCount, monthSalesAgg, monthGrindingAgg] =
     await Promise.all([
       Sale.aggregate([{ $match: { date: { $gte: startOfToday } } }, { $group: { _id: null, total: { $sum: '$totalAmount' } } }]),
       GrindingLog.aggregate([{ $match: { date: { $gte: startOfToday } } }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
@@ -30,15 +30,16 @@ export async function getDashboardSummary(req, res) {
         },
       ]),
       GrindingLog.aggregate([{ $match: { date: { $gte: startOfMonth } } }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
-      Expense.aggregate([{ $match: { date: { $gte: startOfMonth } } }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
     ]);
 
   const todaySales = (todaySalesAgg[0]?.total || 0) + (todayGrindingAgg[0]?.total || 0);
   const outstandingUdhaar = customers.reduce((sum, c) => sum + c.creditBalance, 0);
   const monthRevenue = (monthSalesAgg[0]?.revenue || 0) + (monthGrindingAgg[0]?.total || 0);
   const monthCost = monthSalesAgg[0]?.cost || 0;
-  const monthExpenses = monthExpensesAgg[0]?.total || 0;
-  const monthProfit = monthRevenue - monthCost - monthExpenses;
+  // Profit = what products/grinding sold for minus what the sold products cost us.
+  // Each sold product's cost already includes its purchase expenses (bilti etc.), and general
+  // shop expenses (food, rent...) are deliberately NOT deducted here.
+  const monthProfit = monthRevenue - monthCost;
 
   res.json({
     todaySales: Number(todaySales.toFixed(2)),
@@ -73,17 +74,16 @@ export async function getProfitLoss(req, res) {
   const grindingRevenue = grindingAgg[0]?.total || 0;
   const totalExpenses = expensesAgg[0]?.total || 0;
   const totalRevenue = goodsRevenue + grindingRevenue;
-  const grossProfit = totalRevenue - costOfGoods;
-  const netProfit = grossProfit - totalExpenses;
+  const profit = totalRevenue - costOfGoods;
 
   res.json({
     goodsRevenue: Number(goodsRevenue.toFixed(2)),
     grindingRevenue: Number(grindingRevenue.toFixed(2)),
     totalRevenue: Number(totalRevenue.toFixed(2)),
     costOfGoods: Number(costOfGoods.toFixed(2)),
-    grossProfit: Number(grossProfit.toFixed(2)),
+    profit: Number(profit.toFixed(2)),
+    // Informational only: general expenses are not subtracted from profit.
     totalExpenses: Number(totalExpenses.toFixed(2)),
-    netProfit: Number(netProfit.toFixed(2)),
   });
 }
 

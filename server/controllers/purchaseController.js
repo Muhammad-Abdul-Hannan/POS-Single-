@@ -1,12 +1,13 @@
 import Product from '../models/Product.js';
 import Purchase from '../models/Purchase.js';
 import Supplier from '../models/Supplier.js';
+import { allocateExtraExpense } from '../utils/landedCost.js';
 
 const PRODUCT_CATEGORIES = ['plastic', 'steel', 'toy', 'jewellery', 'grocery', 'aata', 'other'];
 const PRODUCT_UNITS = ['piece', 'kg'];
 
 export async function createPurchase(req, res) {
-  const { supplierId, items, amountPaid } = req.body;
+  const { supplierId, items, amountPaid, date, extraExpense, extraExpenseNote } = req.body;
 
   if (!supplierId) return res.status(400).json({ message: 'supplierId is required' });
   if (!Array.isArray(items) || items.length === 0) {
@@ -15,6 +16,22 @@ export async function createPurchase(req, res) {
 
   const supplier = await Supplier.findById(supplierId);
   if (!supplier) return res.status(404).json({ message: 'Supplier not found' });
+
+  // Purchase date: defaults to now, but can be a past date (not a future one).
+  let purchaseDate = new Date();
+  if (date) {
+    const parsed = new Date(date);
+    if (Number.isNaN(parsed.getTime())) return res.status(400).json({ message: 'Invalid purchase date' });
+    if (parsed.getTime() > Date.now() + 5 * 60 * 1000) {
+      return res.status(400).json({ message: 'Purchase date cannot be in the future' });
+    }
+    purchaseDate = parsed;
+  }
+
+  const extra = extraExpense === undefined || extraExpense === null || extraExpense === '' ? 0 : Number(extraExpense);
+  if (Number.isNaN(extra) || extra < 0) {
+    return res.status(400).json({ message: 'Extra expense must be zero or more' });
+  }
 
   // Pass 1: validate every item and resolve/prepare it, without writing anything to
   // the DB yet. Items can reference an existing product (productId) or describe a
@@ -85,26 +102,41 @@ export async function createPurchase(req, res) {
   const paid = Number(amountPaid) || 0;
   if (paid > totalCost) return res.status(400).json({ message: 'amountPaid cannot exceed totalCost' });
 
+  // Real cost per unit = supplier cost + this line's share of the extra expense.
+  const allocations = allocateExtraExpense(prepared, extra);
+
   // Pass 2: nothing above touched the DB (besides read-only lookups), so it's now
   // safe to create the new products and proceed exactly as before.
   const resolvedItems = [];
-  for (const entry of prepared) {
+  for (const [index, entry] of prepared.entries()) {
     const product = entry.kind === 'new' ? await Product.create(entry.newProduct) : entry.product;
-    resolvedItems.push({ product: product._id, name: product.name, qty: entry.qty, costPrice: entry.costPrice });
+    resolvedItems.push({
+      product: product._id,
+      name: product.name,
+      qty: entry.qty,
+      costPrice: entry.costPrice,
+      extraCost: allocations[index].extraCost,
+      landedCostPrice: allocations[index].landedCostPrice,
+    });
   }
 
   for (const item of resolvedItems) {
-    await Product.updateOne(
-      { _id: item.product },
-      { $inc: { stockQty: item.qty, totalPurchasedQty: item.qty }, $set: { costPricePerUnit: item.costPrice } }
-    );
+    const update = { $inc: { stockQty: item.qty, totalPurchasedQty: item.qty } };
+    // The product's cost (used for profit on future sales) follows the most recent purchase.
+    // A back-dated entry must not overwrite the cost from a newer purchase.
+    const hasNewerPurchase = await Purchase.exists({ 'items.product': item.product, date: { $gt: purchaseDate } });
+    if (!hasNewerPurchase) update.$set = { costPricePerUnit: item.landedCostPrice };
+    await Product.updateOne({ _id: item.product }, update);
   }
 
   const purchase = await Purchase.create({
     supplier: supplier._id,
+    date: purchaseDate,
     items: resolvedItems,
     totalCost,
     amountPaid: paid,
+    extraExpense: Number(extra.toFixed(2)),
+    extraExpenseNote: typeof extraExpenseNote === 'string' ? extraExpenseNote.trim() : undefined,
     recordedBy: req.user.id,
   });
 

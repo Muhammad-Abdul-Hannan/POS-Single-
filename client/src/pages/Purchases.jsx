@@ -3,6 +3,8 @@ import * as productsApi from "../api/products";
 import * as purchasesApi from "../api/purchases";
 import * as suppliersApi from "../api/suppliers";
 import { formatCurrency } from "../utils/format";
+import { buildBackdatedISO, todayInputValue } from "../utils/commonHelpers";
+import { previewLandedCosts } from "../utils/purchaseHelpers";
 
 const CATEGORIES = [
   { value: "plastic", label: "Plastic" },
@@ -30,6 +32,9 @@ export default function Purchases() {
   const [qtyInput, setQtyInput] = useState("");
   const [costInput, setCostInput] = useState("");
   const [amountPaid, setAmountPaid] = useState("");
+  const [purchaseDate, setPurchaseDate] = useState(todayInputValue());
+  const [extraExpense, setExtraExpense] = useState("");
+  const [extraExpenseNote, setExtraExpenseNote] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -55,11 +60,17 @@ export default function Purchases() {
     [cart],
   );
 
+  const extraAmount = Number(extraExpense) || 0;
+  const landedPreview = useMemo(
+    () => previewLandedCosts(cart, extraAmount),
+    [cart, extraAmount],
+  );
+
   function resetItemInputs() {
     setSelectedProductId("");
     setNewName("");
-    setNewCategory("plastic");
-    setNewUnit("piece");
+    setNewCategory("grocery");
+    setNewUnit("kg");
     setNewSellingPrice("");
     setNewLowStockThreshold("");
     setQtyInput("");
@@ -131,6 +142,9 @@ export default function Purchases() {
     setError("");
     if (!supplierId) return setError("Select a supplier");
     if (cart.length === 0) return setError("Add at least one item");
+    if (extraExpense !== "" && extraAmount < 0)
+      return setError("Extra expense cannot be negative");
+    if (!purchaseDate) return setError("Select the purchase date");
 
     setSubmitting(true);
     try {
@@ -152,10 +166,16 @@ export default function Purchases() {
             : { productId: i.productId, qty: i.qty, costPrice: i.costPrice },
         ),
         amountPaid: Number(amountPaid) || 0,
+        date: buildBackdatedISO(purchaseDate),
+        extraExpense: extraAmount,
+        extraExpenseNote: extraExpenseNote.trim(),
       });
       setCart([]);
       setSupplierId("");
       setAmountPaid("");
+      setPurchaseDate(todayInputValue());
+      setExtraExpense("");
+      setExtraExpenseNote("");
       load();
     } catch (err) {
       setError(err.response?.data?.message || "Failed to record purchase");
@@ -343,6 +363,14 @@ export default function Purchases() {
                   <th className="py-2">Item</th>
                   <th className="py-2 text-right">Qty</th>
                   <th className="py-2 text-right">Cost/unit</th>
+                  {extraAmount > 0 && (
+                    <th
+                      className="py-2 text-right"
+                      title="Supplier cost + this item's share of the extra expense"
+                    >
+                      Real cost/unit
+                    </th>
+                  )}
                   <th className="py-2 text-right">Subtotal</th>
                   <th></th>
                 </tr>
@@ -351,7 +379,7 @@ export default function Purchases() {
                 {cart.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={5}
+                      colSpan={extraAmount > 0 ? 6 : 5}
                       className="py-6 text-center text-slate-400 dark:text-slate-500"
                     >
                       No items added
@@ -377,6 +405,11 @@ export default function Purchases() {
                       <td className="py-2 text-right text-slate-700 dark:text-slate-300">
                         {formatCurrency(item.costPrice)}
                       </td>
+                      {extraAmount > 0 && (
+                        <td className="py-2 text-right text-emerald-700 dark:text-emerald-400">
+                          {formatCurrency(landedPreview[i]?.landedCostPrice)}
+                        </td>
+                      )}
                       <td className="py-2 text-right text-slate-900 dark:text-slate-100">
                         {formatCurrency(item.qty * item.costPrice)}
                       </td>
@@ -397,13 +430,58 @@ export default function Purchases() {
         </div>
 
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 h-fit space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+              Purchase Date
+            </label>
+            <input
+              type="date"
+              max={todayInputValue()}
+              className="w-full rounded-lg border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 px-3 py-2 text-sm"
+              value={purchaseDate}
+              onChange={(e) => setPurchaseDate(e.target.value)}
+            />
+          </div>
           <div className="flex justify-between text-base font-semibold text-slate-900 dark:text-slate-100">
-            <span>Total Cost</span>
+            <span>Owed to Supplier</span>
             <span>{formatCurrency(total)}</span>
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-              Amount Paid Now
+              Extra Expense (bilti, freight, loading…)
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              className="w-full rounded-lg border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 px-3 py-2 text-sm"
+              value={extraExpense}
+              onChange={(e) => setExtraExpense(e.target.value)}
+              placeholder="0"
+            />
+            <input
+              type="text"
+              className="w-full mt-2 rounded-lg border border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 px-3 py-2 text-sm"
+              value={extraExpenseNote}
+              onChange={(e) => setExtraExpenseNote(e.target.value)}
+              placeholder="Note (optional), e.g. Bilti"
+            />
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+              Not paid to the supplier. It is added to the cost of these items
+              (split by value) and used when calculating profit.
+            </p>
+          </div>
+          {extraAmount > 0 && (
+            <div className="flex justify-between text-sm text-slate-700 dark:text-slate-300">
+              <span>Total incl. extra expense</span>
+              <span className="font-medium">
+                {formatCurrency(total + extraAmount)}
+              </span>
+            </div>
+          )}
+          <div>
+            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+              Amount Paid to Supplier Now
             </label>
             <input
               type="number"
@@ -436,13 +514,14 @@ export default function Purchases() {
               <th className="px-4 py-3">Supplier</th>
               <th className="px-4 py-3 text-right">Total</th>
               <th className="px-4 py-3 text-right">Paid</th>
+              <th className="px-4 py-3 text-right">Extra Expense</th>
             </tr>
           </thead>
           <tbody>
             {purchases.length === 0 ? (
               <tr>
                 <td
-                  colSpan={4}
+                  colSpan={5}
                   className="px-4 py-6 text-center text-slate-400 dark:text-slate-500"
                 >
                   No purchases yet.
@@ -465,6 +544,12 @@ export default function Purchases() {
                   </td>
                   <td className="px-4 py-3 text-right text-slate-900 dark:text-slate-100">
                     {formatCurrency(p.amountPaid)}
+                  </td>
+                  <td
+                    className="px-4 py-3 text-right text-slate-600 dark:text-slate-400"
+                    title={p.extraExpenseNote || undefined}
+                  >
+                    {p.extraExpense > 0 ? formatCurrency(p.extraExpense) : "—"}
                   </td>
                 </tr>
               ))

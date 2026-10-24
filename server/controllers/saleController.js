@@ -4,8 +4,21 @@ import Sale from '../models/Sale.js';
 import { nextSequence } from '../models/Counter.js';
 import { dateRangeFilter } from '../utils/dateRange.js';
 
+// Owners get the profit of each sale (billed amount minus what the sold items cost us at the time).
+// Everyone else gets the sale without the per-item cost, so staff can't see what stock cost.
+function serializeSale(sale, isOwner) {
+  const obj = sale.toObject ? sale.toObject() : sale;
+  if (isOwner) {
+    const cost = obj.items.reduce((sum, i) => sum + i.qty * (i.costRate || 0), 0);
+    obj.profit = Number((obj.totalAmount - cost).toFixed(2));
+  } else {
+    obj.items = obj.items.map(({ costRate, ...rest }) => rest);
+  }
+  return obj;
+}
+
 export async function createSale(req, res) {
-  const { items, customerId, paymentType, amountPaid } = req.body;
+  const { items, customerId, paymentType, amountPaid, date } = req.body;
 
   if (!Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ message: 'At least one item is required' });
@@ -15,6 +28,20 @@ export async function createSale(req, res) {
   }
   if (paymentType === 'credit' && !customerId) {
     return res.status(400).json({ message: 'customerId is required for credit sales' });
+  }
+
+  // Sale date: defaults to now. Only the owner may record a sale for a past date (never a future one).
+  let saleDate = new Date();
+  if (date) {
+    if (req.user.role !== 'owner') {
+      return res.status(403).json({ message: 'Only the owner can record a sale for a past date' });
+    }
+    const parsed = new Date(date);
+    if (Number.isNaN(parsed.getTime())) return res.status(400).json({ message: 'Invalid sale date' });
+    if (parsed.getTime() > Date.now() + 5 * 60 * 1000) {
+      return res.status(400).json({ message: 'Sale date cannot be in the future' });
+    }
+    saleDate = parsed;
   }
 
   const resolvedItems = [];
@@ -88,6 +115,7 @@ export async function createSale(req, res) {
 
   const sale = await Sale.create({
     invoiceNo,
+    date: saleDate,
     cashier: req.user.id,
     customer: customer?._id,
     items: resolvedItems,
@@ -103,7 +131,7 @@ export async function createSale(req, res) {
   }
 
   await sale.populate('customer', 'name phone');
-  res.status(201).json(sale);
+  res.status(201).json(serializeSale(sale, req.user.role === 'owner'));
 }
 
 export async function listSales(req, res) {
@@ -112,11 +140,12 @@ export async function listSales(req, res) {
   if (customerId) filter.customer = customerId;
 
   const sales = await Sale.find(filter).populate('customer', 'name phone').populate('cashier', 'name').sort({ date: -1 });
-  res.json(sales);
+  const isOwner = req.user.role === 'owner';
+  res.json(sales.map((sale) => serializeSale(sale, isOwner)));
 }
 
 export async function getSale(req, res) {
   const sale = await Sale.findById(req.params.id).populate('customer', 'name phone').populate('cashier', 'name');
   if (!sale) return res.status(404).json({ message: 'Sale not found' });
-  res.json(sale);
+  res.json(serializeSale(sale, req.user.role === 'owner'));
 }
